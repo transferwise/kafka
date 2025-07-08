@@ -130,7 +130,7 @@ jobs:
           java-version: 23
           gradle-cache-read-only: ${{ !inputs.is-trunk }}
           gradle-cache-write-only: ${{ inputs.is-trunk }}
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.KAFKA_DEVELOCITY_ACCESS_KEY }}
       - name: Compile and validate
         env:
           SCAN_ARG: ${{ inputs.is-public-fork && '--no-scan' || '--scan' }}
