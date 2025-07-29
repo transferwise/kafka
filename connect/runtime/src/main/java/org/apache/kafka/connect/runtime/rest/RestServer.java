@@ -37,6 +37,9 @@ import org.eclipse.jetty.ee10.servlets.HeaderFilter;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.Slf4jRequestLogWriter;
@@ -170,7 +173,15 @@ public abstract class RestServer {
             } else {
                 ssl = SSLUtils.createServerSideSslContextFactory(config);
             }
-            connector = new ServerConnector(jettyServer, ssl);
+            // We need the below hack (disabling SNI host check) to allow REST call forwarding
+            // from followers to the leader in a Connect cluster. Leaders are called by IP over
+            // HTTPS and mTLS certs are provided by Spiffe/Spire.
+            // https://issues.apache.org/jira/browse/KAFKA-19556
+            SecureRequestCustomizer customizer = new SecureRequestCustomizer();
+            customizer.setSniHostCheck(false);
+            HttpConfiguration https = new HttpConfiguration();
+            https.addCustomizer(customizer);
+            connector = new ServerConnector(jettyServer, ssl, new HttpConnectionFactory(https));
             if (!isAdmin) {
                 connector.setName(String.format("%s_%s%d", PROTOCOL_HTTPS, hostname, port));
             }
