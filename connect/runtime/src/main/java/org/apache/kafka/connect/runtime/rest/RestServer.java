@@ -178,6 +178,7 @@ public abstract class RestServer {
             // HTTPS and mTLS certs are provided by Spiffe/Spire.
             // https://issues.apache.org/jira/browse/KAFKA-19556
             SecureRequestCustomizer customizer = new SecureRequestCustomizer();
+            customizer.setSniRequired(false);
             customizer.setSniHostCheck(false);
             HttpConfiguration https = new HttpConfiguration();
             https.addCustomizer(customizer);
