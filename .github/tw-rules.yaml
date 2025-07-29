@@ -1,0 +1,12 @@
+actions:
+
+  branch-protection-settings:
+    branches:
+      - name: trunk
+        checks:
+          - name: Compile and Check (Merge Ref)
+            type: tests
+      - name: 4.0-connect_sni_host_check_disable
+        checks:
+          - name: Compile and Check (Merge Ref)
+            type: tests
