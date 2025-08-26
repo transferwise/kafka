@@ -34,6 +34,7 @@ import org.apache.kafka.connect.source.SourceTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -176,7 +177,16 @@ public class MirrorSourceTask extends SourceTask {
             return;
         }
         TopicPartition topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
-        long latency = System.currentTimeMillis() - record.timestamp();
+        long correctedTimestamp = record.timestamp();
+        Header eventProxiedTimeHeader = (Header) record.headers().lastWithName("eventProxiedTime");  // TODO: change to standardized header name when available
+        if (eventProxiedTimeHeader != null) {
+            try {
+                correctedTimestamp = Long.parseLong(new String(eventProxiedTimeHeader.value(), StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                log.error("Error parsing eventProxiedTime header value '{}' -- using record timestamp instead.", eventProxiedTimeHeader.value(), e);
+            }
+        }
+        long latency = System.currentTimeMillis() - correctedTimestamp;
         metrics.countRecord(topicPartition);
         metrics.replicationLatency(topicPartition, latency);
         // Queue offset syncs only when offsetWriter is available
