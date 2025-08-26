@@ -180,10 +180,11 @@ public class MirrorSourceTask extends SourceTask {
         long correctedTimestamp = record.timestamp();
         Header eventProxiedTimeHeader = (Header) record.headers().lastWithName("eventProxiedTime");  // TODO: change to standardized header name when available
         if (eventProxiedTimeHeader != null) {
+            String headerString = new String(eventProxiedTimeHeader.value(), StandardCharsets.UTF_8);
             try {
-                correctedTimestamp = Long.parseLong(new String(eventProxiedTimeHeader.value(), StandardCharsets.UTF_8));
-            } catch (Exception e) {
-                log.error("Error parsing eventProxiedTime header value '{}' -- using record timestamp instead.", eventProxiedTimeHeader.value(), e);
+                correctedTimestamp = Long.parseLong(headerString);
+            } catch (NumberFormatException e) {
+                log.error("Error parsing eventProxiedTime header value '{}' -- using record timestamp instead.", headerString, e);
             }
         }
         long latency = System.currentTimeMillis() - correctedTimestamp;
