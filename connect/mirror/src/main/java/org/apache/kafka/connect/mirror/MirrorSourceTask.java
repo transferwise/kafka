@@ -177,17 +177,25 @@ public class MirrorSourceTask extends SourceTask {
             return;
         }
         TopicPartition topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
+        long currentTime = System.currentTimeMillis();
         long correctedTimestamp = record.timestamp();
-        Header eventProxiedTimeHeader = (Header) record.headers().lastWithName("eventProxiedTime");  // TODO: change to standardized header name when available
+        org.apache.kafka.connect.header.Header eventProxiedTimeHeader = record.headers().lastWithName("eventProxiedTime");  // TODO: change to standardized header name when available
         if (eventProxiedTimeHeader != null) {
-            String headerString = new String(eventProxiedTimeHeader.value(), StandardCharsets.UTF_8);
             try {
-                correctedTimestamp = Long.parseLong(headerString);
+                Object headerValue = eventProxiedTimeHeader.value();
+                if (headerValue instanceof byte[]) {
+                    correctedTimestamp = Long.parseLong(new String((byte[]) headerValue, StandardCharsets.UTF_8));
+                } else {
+                    log.error("Unrecognized eventProxiedTime header value type {}, check Connect's header converter -- using record timestamp instead.",
+                            headerValue != null ? headerValue.getClass().getSimpleName() : "null");
+                }
             } catch (NumberFormatException e) {
-                log.error("Error parsing eventProxiedTime header value '{}' -- using record timestamp instead.", headerString, e);
+                log.error("Error parsing eventProxiedTime header as a number -- using record timestamp instead.", e);
+            } catch (Exception e) {
+                log.error("Unexpected error processing eventProxiedTime header -- using record timestamp instead.", e);
             }
         }
-        long latency = System.currentTimeMillis() - correctedTimestamp;
+        long latency = currentTime - correctedTimestamp;
         metrics.countRecord(topicPartition);
         metrics.replicationLatency(topicPartition, latency);
         // Queue offset syncs only when offsetWriter is available
