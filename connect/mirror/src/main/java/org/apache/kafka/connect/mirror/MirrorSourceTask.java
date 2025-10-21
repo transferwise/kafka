@@ -178,23 +178,7 @@ public class MirrorSourceTask extends SourceTask {
         }
         TopicPartition topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
         long currentTime = System.currentTimeMillis();
-        long correctedTimestamp = record.timestamp();
-        org.apache.kafka.connect.header.Header eventProxiedTimeHeader = record.headers().lastWithName("engineEventProcessedTime");
-        if (eventProxiedTimeHeader != null) {
-            try {
-                Object headerValue = eventProxiedTimeHeader.value();
-                if (headerValue instanceof byte[]) {
-                    correctedTimestamp = Long.parseLong(new String((byte[]) headerValue, StandardCharsets.UTF_8));
-                } else {
-                    log.error("Unrecognized engineEventProcessedTime header value type {}, check Connect's header converter -- using record timestamp instead.",
-                            headerValue != null ? headerValue.getClass().getSimpleName() : "null");
-                }
-            } catch (NumberFormatException e) {
-                log.error("Error parsing engineEventProcessedTime header as a number -- using record timestamp instead.", e);
-            } catch (Exception e) {
-                log.error("Unexpected error processing engineEventProcessedTime header -- using record timestamp instead.", e);
-            }
-        }
+        long correctedTimestamp = getCorrectedTimestamp(record);
         long latency = currentTime - correctedTimestamp;
         metrics.countRecord(topicPartition);
         metrics.replicationLatency(topicPartition, latency);
@@ -208,7 +192,45 @@ public class MirrorSourceTask extends SourceTask {
             offsetSyncWriter.firePendingOffsetSyncs();
         }
     }
- 
+
+    private long getCorrectedTimestamp(SourceRecord record) {
+        Long timestamp = parseTimestampHeader(record, "engineEventProcessedTime");
+        if (timestamp != null) {
+            return timestamp;
+        }
+
+        timestamp = parseTimestampHeader(record, "eventProxiedTime");
+        if (timestamp != null) {
+            return timestamp;
+        }
+
+        return record.timestamp();
+    }
+
+    private Long parseTimestampHeader(SourceRecord record, String headerName) {
+        org.apache.kafka.connect.header.Header header = record.headers().lastWithName(headerName);
+        if (header == null) {
+            return null;
+        }
+
+        try {
+            Object headerValue = header.value();
+            if (headerValue instanceof byte[]) {
+                return Long.parseLong(new String((byte[]) headerValue, StandardCharsets.UTF_8));
+            } else {
+                log.error("Unrecognized {} header value type {}, check Connect's header converter -- using fallback timestamp.",
+                        headerName, headerValue != null ? headerValue.getClass().getSimpleName() : "null");
+                return null;
+            }
+        } catch (NumberFormatException e) {
+            log.error("Error parsing {} header as a number -- using fallback timestamp.", headerName, e);
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error processing {} header -- using fallback timestamp.", headerName, e);
+            return null;
+        }
+    }
+
     private Map<TopicPartition, Long> loadOffsets(Set<TopicPartition> topicPartitions) {
         return topicPartitions.stream().collect(Collectors.toMap(x -> x, this::loadOffset));
     }
