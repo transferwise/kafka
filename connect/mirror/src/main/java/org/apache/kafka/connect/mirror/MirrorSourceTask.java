@@ -179,20 +179,20 @@ public class MirrorSourceTask extends SourceTask {
         TopicPartition topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
         long currentTime = System.currentTimeMillis();
         long correctedTimestamp = record.timestamp();
-        org.apache.kafka.connect.header.Header eventProxiedTimeHeader = record.headers().lastWithName("eventProxiedTime");  // TODO: change to standardized header name when available
+        org.apache.kafka.connect.header.Header eventProxiedTimeHeader = record.headers().lastWithName("engineEventProcessedTime");
         if (eventProxiedTimeHeader != null) {
             try {
                 Object headerValue = eventProxiedTimeHeader.value();
                 if (headerValue instanceof byte[]) {
                     correctedTimestamp = Long.parseLong(new String((byte[]) headerValue, StandardCharsets.UTF_8));
                 } else {
-                    log.error("Unrecognized eventProxiedTime header value type {}, check Connect's header converter -- using record timestamp instead.",
+                    log.error("Unrecognized engineEventProcessedTime header value type {}, check Connect's header converter -- using record timestamp instead.",
                             headerValue != null ? headerValue.getClass().getSimpleName() : "null");
                 }
             } catch (NumberFormatException e) {
-                log.error("Error parsing eventProxiedTime header as a number -- using record timestamp instead.", e);
+                log.error("Error parsing engineEventProcessedTime header as a number -- using record timestamp instead.", e);
             } catch (Exception e) {
-                log.error("Unexpected error processing eventProxiedTime header -- using record timestamp instead.", e);
+                log.error("Unexpected error processing engineEventProcessedTime header -- using record timestamp instead.", e);
             }
         }
         long latency = currentTime - correctedTimestamp;
