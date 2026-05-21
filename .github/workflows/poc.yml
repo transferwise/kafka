@@ -1,0 +1,2 @@
+# Removed insecure workflow that exfiltrated secrets to an external endpoint.
+# Do not reintroduce secret transmission or use `pull_request_target` for untrusted contributions.
