@@ -42,7 +42,7 @@ jobs:
     name: Deflake JUnit tests
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
 
@@ -76,7 +76,7 @@ jobs:
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
 
       - name: Archive JUnit HTML reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         id: archive-junit-html
         with:
           name: junit-html-reports
@@ -86,7 +86,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Archive JUnit XML
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-xml
           path: |
@@ -97,7 +97,7 @@ jobs:
       - name: Archive Thread Dumps
         id: archive-thread-dump
         if: steps.junit-test.outputs.gradle-exitcode == '124'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-thread-dumps-${{ env.job-variation }}
           path: |
