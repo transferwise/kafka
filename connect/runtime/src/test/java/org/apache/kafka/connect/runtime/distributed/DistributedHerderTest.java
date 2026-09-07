@@ -363,6 +363,40 @@ public class DistributedHerderTest {
     }
 
     @Test
+    public void testJoinAssignmentWithMissingTaskConfigFailsActionably() {
+        long configOffset = 11402L;
+        ClusterConfigState inconsistentSnapshot = new ClusterConfigState(
+                configOffset,
+                null,
+                Collections.singletonMap(CONN1, 3),
+                Collections.singletonMap(CONN1, CONN1_CONFIG),
+                Collections.singletonMap(CONN1, TargetState.STARTED),
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.singletonMap(CONN1, new AppliedConnectorConfig(CONN1_CONFIG)),
+                Collections.emptySet(),
+                Collections.singleton(CONN1));
+
+        when(member.memberId()).thenReturn("member");
+        when(member.currentProtocolVersion()).thenReturn(CONNECT_PROTOCOL_V0);
+        expectRebalance(configOffset, Collections.emptyList(), singletonList(TASK1));
+        expectConfigRefreshAndSnapshot(inconsistentSnapshot);
+        expectMemberPoll();
+
+        herder.tick();
+
+        ArgumentCaptor<TaskStatus> status = ArgumentCaptor.forClass(TaskStatus.class);
+        verify(statusBackingStore).putSafe(status.capture());
+        assertEquals(TaskStatus.State.FAILED, status.getValue().state());
+        assertTrue(status.getValue().trace().contains("Cannot start task " + TASK1));
+        assertTrue(status.getValue().trace().contains("config state at offset " + configOffset));
+        assertTrue(status.getValue().trace().contains("connector marked inconsistent: true"));
+        assertFalse(status.getValue().trace().contains("inputMap"));
+        verify(worker, never()).startSourceTask(eq(TASK1), any(), any(), any(), eq(herder), any());
+    }
+
+    @Test
     public void testRebalance() {
         // Join group and get assignment
         when(member.memberId()).thenReturn("member");

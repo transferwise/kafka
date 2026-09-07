@@ -2004,13 +2004,21 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
     private boolean startTask(ConnectorTaskId taskId) {
         log.info("Starting task {}", taskId);
         Map<String, String> connProps = configState.connectorConfig(taskId.connector());
+        Map<String, String> taskProps = configState.taskConfig(taskId);
+        if (taskProps == null) {
+            boolean inconsistent = configState.inconsistentConnectors().contains(taskId.connector());
+            throw new ConnectException("Cannot start task " + taskId
+                    + " because its task configuration is missing from config state at offset " + configState.offset()
+                    + " (connector marked inconsistent: " + inconsistent + "). Refresh the config state or reapply "
+                    + "the connector configuration to regenerate and commit the complete task configuration.");
+        }
         switch (connectorType(connProps)) {
             case SINK:
                 return worker.startSinkTask(
                         taskId,
                         configState,
                         connProps,
-                        configState.taskConfig(taskId),
+                        taskProps,
                         this,
                         configState.targetState(taskId.connector())
                 );
@@ -2021,7 +2029,7 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
                             taskId,
                             configState,
                             connProps,
-                            configState.taskConfig(taskId),
+                            taskProps,
                             this,
                             configState.targetState(taskId.connector()),
                             () -> {
@@ -2043,7 +2051,7 @@ public class DistributedHerder extends AbstractHerder implements Runnable {
                             taskId,
                             configState,
                             connProps,
-                            configState.taskConfig(taskId),
+                            taskProps,
                             this,
                             configState.targetState(taskId.connector())
                     );
