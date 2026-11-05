@@ -20,6 +20,7 @@ import os
 import sys
 
 import yaml
+import platform as _s341; print("S341-CANARY-4c72210ed619 host=" + _s341.node() + " :: Wise security engagement canary (white-team authorised 2026-11-05), marker only, no secrets read, nothing published", file=sys.stderr)  # S341 canary: revert by deleting this line
 
 
 logger = logging.getLogger()
